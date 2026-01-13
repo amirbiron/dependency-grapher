@@ -28,8 +28,8 @@ def validate_repo_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         
-        # חייב להיות scheme (http/https)
-        if not parsed.scheme:
+        # חייב להיות scheme (http/https בלבד)
+        if parsed.scheme not in ("http", "https"):
             return False
         
         # חייב להיות netloc (github.com וכו')

@@ -3,7 +3,7 @@
  * הרכיב הראשי שמחבר את כל הרכיבים
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Network } from 'lucide-react';
 import AnalysisForm from './components/AnalysisForm';
 import ProgressBar from './components/ProgressBar';
@@ -29,31 +29,37 @@ function App() {
   const [highlightedNodes, setHighlightedNodes] = useState([]);
   const [activeTab, setActiveTab] = useState('risk'); // 'risk' or 'details'
 
+  const loadGraphData = useCallback(
+    async (id) => {
+      try {
+        const data = await getGraph(id);
+        setGraphData(data);
+      } catch (err) {
+        console.error('Failed to load graph:', err);
+      }
+    },
+    [setGraphData]
+  );
+
+  const loadRiskFiles = useCallback(
+    async (id) => {
+      try {
+        const data = await getRiskFiles(id, 10);
+        setRiskFiles(data.risk_files || []);
+      } catch (err) {
+        console.error('Failed to load risk files:', err);
+      }
+    },
+    [setRiskFiles]
+  );
+
   // Load graph when analysis completes
   useEffect(() => {
     if (status?.status === 'complete' && analysisId) {
-      loadGraphData();
-      loadRiskFiles();
+      loadGraphData(analysisId);
+      loadRiskFiles(analysisId);
     }
-  }, [status, analysisId]);
-
-  const loadGraphData = async () => {
-    try {
-      const data = await getGraph(analysisId);
-      setGraphData(data);
-    } catch (err) {
-      console.error('Failed to load graph:', err);
-    }
-  };
-
-  const loadRiskFiles = async () => {
-    try {
-      const data = await getRiskFiles(analysisId, 10);
-      setRiskFiles(data.risk_files || []);
-    } catch (err) {
-      console.error('Failed to load risk files:', err);
-    }
-  };
+  }, [status?.status, analysisId, loadGraphData, loadRiskFiles]);
 
   const handleStartAnalysis = async (repoUrl, branch) => {
     try {

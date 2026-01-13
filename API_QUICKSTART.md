@@ -239,7 +239,9 @@ analyzeRepo('https://github.com/psf/requests');
 
 ### "Timeout"
 - repos גדולים לוקחים זמן
-- שנה `ANALYSIS_TIMEOUT` ב-.env
+- ב-Frontend הגדל את ה-timeout של הקריאות ל-API:
+  - `REACT_APP_API_TIMEOUT_MS` (ברירת מחדל: 300000)
+  - `REACT_APP_GRAPH_TIMEOUT_MS` (ברירת מחדל: 600000)
 
 ---
 

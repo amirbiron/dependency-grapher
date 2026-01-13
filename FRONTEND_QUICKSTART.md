@@ -133,6 +133,8 @@ http://localhost:3000
 
 ```bash
 REACT_APP_API_URL=http://localhost:5000
+REACT_APP_API_TIMEOUT_MS=300000
+REACT_APP_GRAPH_TIMEOUT_MS=600000
 ```
 
 ---

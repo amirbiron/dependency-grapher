@@ -6,9 +6,23 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+// Timeouts (ms)
+// - In large repos the graph JSON can be big and take time to transfer/parse.
+// - Allow overriding via env vars (Create React App exposes REACT_APP_* at build time).
+const parseTimeout = (value, fallback) => {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+// Global request timeout (default: 5 minutes). Set to 0 to disable axios timeout.
+const API_TIMEOUT_MS = parseTimeout(process.env.REACT_APP_API_TIMEOUT_MS, 300000);
+
+// Graph fetch may be the heaviest response; give it more time by default.
+const GRAPH_TIMEOUT_MS = parseTimeout(process.env.REACT_APP_GRAPH_TIMEOUT_MS, 600000);
+
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -76,6 +90,7 @@ export const getAnalysis = async (analysisId) => {
 export const getGraph = async (analysisId, format = 'cytoscape') => {
   const response = await api.get(`/api/analysis/${analysisId}/graph`, {
     params: { format },
+    timeout: GRAPH_TIMEOUT_MS,
   });
   return response.data;
 };
@@ -143,7 +158,7 @@ export const pollAnalysis = async (
   analysisId,
   onProgress = null,
   pollInterval = 2000,
-  maxAttempts = 150
+  maxAttempts = 600
 ) => {
   let attempts = 0;
 

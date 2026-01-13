@@ -65,9 +65,15 @@ class Database:
             
             logger.info(f"Connected to MongoDB: {database_name}")
             
-        except ConnectionFailure as e:
+        except Exception as e:
+            # לא מפילים את השרת אם ה-DB לא זמין (בריאות/API בסיסי עדיין יכולים לעבוד).
+            # קריאות שתלויות ב-DB יחזירו שגיאה בהמשך.
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            raise
+            self.client = None
+            self.db = None
+            self.analyses_collection = None
+            self.cache_collection = None
+            return
     
     def _create_indexes(self):
         """יצירת indexes לביצועים"""
@@ -113,6 +119,8 @@ class Database:
     def check_connection(self) -> str:
         """בדיקת חיבור ל-DB"""
         try:
+            if not self.client:
+                return "not configured"
             self.client.admin.command('ping')
             return "connected"
         except Exception as e:

@@ -17,6 +17,10 @@ from pymongo.errors import ConnectionFailure, OperationFailure
 logger = logging.getLogger(__name__)
 
 
+class DatabaseUnavailable(RuntimeError):
+    """Raised when a DB-backed operation is attempted without a DB connection."""
+
+
 class Database:
     """
     מנהל חיבור ל-MongoDB ופעולות CRUD
@@ -27,6 +31,21 @@ class Database:
         self.db = None
         self.analyses_collection = None
         self.cache_collection = None
+        self._init_error: Optional[str] = None
+
+    def is_available(self) -> bool:
+        """Whether MongoDB connection/collections are initialized."""
+        return (
+            self.client is not None
+            and self.db is not None
+            and self.analyses_collection is not None
+            and self.cache_collection is not None
+        )
+
+    def _require_available(self) -> None:
+        """Ensure DB is available for DB-backed operations."""
+        if not self.is_available():
+            raise DatabaseUnavailable(self._init_error or "MongoDB is not available")
     
     def init_app(self, app):
         """
@@ -64,14 +83,29 @@ class Database:
             self._create_indexes()
             
             logger.info(f"Connected to MongoDB: {database_name}")
+            self._init_error = None
             
         except ConnectionFailure as e:
+            # Don't crash the whole web app if DB isn't reachable at startup.
+            # The API can still serve health checks; DB-backed endpoints will return 503.
+            self._init_error = str(e)
+            self.client = None
+            self.db = None
+            self.analyses_collection = None
+            self.cache_collection = None
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            raise
+        except Exception as e:
+            self._init_error = str(e)
+            self.client = None
+            self.db = None
+            self.analyses_collection = None
+            self.cache_collection = None
+            logger.error(f"Failed to initialize MongoDB: {str(e)}")
     
     def _create_indexes(self):
         """יצירת indexes לביצועים"""
         try:
+            self._require_available()
             # Index על analysis_id
             self.analyses_collection.create_index(
                 [("analysis_id", ASCENDING)],
@@ -112,6 +146,8 @@ class Database:
     
     def check_connection(self) -> str:
         """בדיקת חיבור ל-DB"""
+        if not self.client:
+            return f"disconnected: {self._init_error or 'not configured'}"
         try:
             self.client.admin.command('ping')
             return "connected"
@@ -132,6 +168,7 @@ class Database:
         Returns:
             analysis_id
         """
+        self._require_available()
         try:
             result = self.analyses_collection.insert_one(analysis_data)
             logger.info(f"Created analysis: {analysis_data['analysis_id']}")
@@ -151,6 +188,7 @@ class Database:
         Returns:
             מידע על הניתוח או None
         """
+        self._require_available()
         try:
             return self.analyses_collection.find_one({"analysis_id": analysis_id})
         except Exception as e:
@@ -168,6 +206,7 @@ class Database:
         Returns:
             True אם הצליח
         """
+        self._require_available()
         try:
             updates['updated_at'] = datetime.utcnow()
             
@@ -240,6 +279,7 @@ class Database:
         Returns:
             True אם נמחק
         """
+        self._require_available()
         try:
             # מחיקת הניתוח
             result = self.analyses_collection.delete_one({"analysis_id": analysis_id})
@@ -264,6 +304,7 @@ class Database:
         Returns:
             הניתוח האחרון או None
         """
+        self._require_available()
         try:
             return self.analyses_collection.find_one(
                 {"repo_url": repo_url},
@@ -288,6 +329,7 @@ class Database:
         Returns:
             רשימת ניתוחים
         """
+        self._require_available()
         try:
             query = {}
             if status:
@@ -314,6 +356,7 @@ class Database:
         Returns:
             מספר הניתוחים
         """
+        self._require_available()
         try:
             query = {}
             if status:
@@ -344,6 +387,7 @@ class Database:
         Returns:
             True אם נשמר
         """
+        self._require_available()
         try:
             cache_entry = {
                 "analysis_id": analysis_id,
@@ -378,6 +422,7 @@ class Database:
         Returns:
             נתוני blast radius או None
         """
+        self._require_available()
         try:
             cached = self.cache_collection.find_one({
                 "analysis_id": analysis_id,
@@ -403,6 +448,7 @@ class Database:
         Returns:
             True אם נוקה
         """
+        self._require_available()
         try:
             result = self.cache_collection.delete_many({"analysis_id": analysis_id})
             logger.info(f"Cleared {result.deleted_count} cache entries for {analysis_id}")
@@ -423,6 +469,7 @@ class Database:
         Returns:
             מידע סטטיסטי
         """
+        self._require_available()
         try:
             total_analyses = self.analyses_collection.count_documents({})
             complete = self.analyses_collection.count_documents({"status": "complete"})
@@ -455,6 +502,7 @@ class Database:
         Returns:
             מספר ניתוחים שנמחקו
         """
+        self._require_available()
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=days)
             

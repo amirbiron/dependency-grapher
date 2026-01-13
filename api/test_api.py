@@ -6,54 +6,50 @@ Basic API Tests
 """
 
 import pytest
-import json
-from pathlib import Path
-
-# נניח שהשרת רץ בlocalhost:5000
-BASE_URL = "http://localhost:5000"
 
 
-def test_health_check():
+@pytest.fixture()
+def client():
+    """Flask test client (no external server required)."""
+    from api.app import app
+    return app.test_client()
+
+
+def test_health_check(client):
     """בדיקת health endpoint"""
-    import requests
-    
-    response = requests.get(f"{BASE_URL}/health")
+    response = client.get("/health")
     assert response.status_code == 200
     
-    data = response.json()
+    data = response.get_json()
     assert data["status"] == "healthy"
     assert "version" in data
 
 
-def test_api_health_check():
+def test_api_health_check(client):
     """בדיקת API health"""
-    import requests
-    
-    response = requests.get(f"{BASE_URL}/api/health")
+    response = client.get("/api/health")
     assert response.status_code == 200
     
-    data = response.json()
+    data = response.get_json()
     assert data["status"] == "healthy"
 
 
-def test_start_analysis_invalid_url():
+def test_start_analysis_invalid_url(client):
     """בדיקת התחלת ניתוח עם URL לא תקין"""
-    import requests
-    
-    response = requests.post(f"{BASE_URL}/api/analyze", json={
-        "repo_url": "not-a-valid-url"
-    })
+    response = client.post("/api/analyze", json={"repo_url": "not-a-valid-url"})
     
     assert response.status_code == 400
-    data = response.json()
+    data = response.get_json()
     assert "error" in data
 
 
-def test_get_nonexistent_analysis():
+def test_get_nonexistent_analysis(client, monkeypatch):
     """בדיקת קבלת ניתוח שלא קיים"""
-    import requests
-    
-    response = requests.get(f"{BASE_URL}/api/analysis/nonexistent123")
+    # Avoid needing a real MongoDB for this unit test.
+    import api.app as app_module
+    monkeypatch.setattr(app_module.db, "get_analysis", lambda _analysis_id: None)
+
+    response = client.get("/api/analysis/nonexistent123")
     assert response.status_code == 404
 
 

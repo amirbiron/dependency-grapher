@@ -20,7 +20,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
-from .database import db
+from .database import db, DatabaseUnavailable
 from .tasks import AnalysisTask
 from .utils import validate_repo_url, generate_analysis_id
 
@@ -75,9 +75,33 @@ def handle_exception(e):
     return jsonify(response), 500
 
 
+@app.errorhandler(DatabaseUnavailable)
+def handle_db_unavailable(e):
+    """Return a clear 503 when MongoDB isn't available."""
+    return jsonify({
+        "error": "Service Unavailable",
+        "message": str(e),
+        "status_code": 503
+    }), 503
+
+
 # ============================================
 # Health Check
 # ============================================
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root route (useful for platform health checks)."""
+    return jsonify({
+        "service": "dependency-grapher-api",
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat(),
+        "endpoints": {
+            "health": "/health",
+            "api_health": "/api/health",
+            "start_analysis": "/api/analyze"
+        }
+    }), 200
 
 @app.route('/health', methods=['GET'])
 def health_check():

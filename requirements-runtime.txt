@@ -1,0 +1,16 @@
+# Runtime / production dependencies only (used by Render deploy)
+networkx==3.2.1
+gitpython==3.1.40
+
+# Web / API
+flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+
+# Database
+pymongo==4.6.1
+dnspython==2.4.2
+
+# Utils
+python-dotenv==1.0.0
+pyyaml==6.0.1

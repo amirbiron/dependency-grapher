@@ -1,0 +1,26 @@
+# Core Dependencies
+networkx==3.2.1
+gitpython==3.1.40
+
+# Database
+pymongo==4.6.1
+dnspython==2.4.2
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+
+# Utils
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# Development & Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+black==23.12.1
+flake8==7.0.0
+
+# Optional (for advanced features)
+matplotlib==3.8.2  # For graph visualization
+plotly==5.18.0     # Interactive graphs

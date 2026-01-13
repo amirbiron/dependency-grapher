@@ -110,8 +110,13 @@ class AnalysisTask:
             # שלב 4: שמירה ב-DB
             logger.info(f"[{self.analysis_id}] Saving results...")
             
+            # Extract summary from result.to_dict() to avoid double nesting
+            # result.to_dict() returns { summary: { total_files, ... }, ... }
+            # We want status.summary.total_files, not status.summary.summary.total_files
+            result_dict = result.to_dict()
+            
             analysis_results = {
-                "summary": result.to_dict(),
+                "summary": result_dict.get('summary', {}),
                 "graph_cytoscape": graph_cytoscape,
                 "graph_data": graph_data,
                 "graph_stats": result.graph_stats,

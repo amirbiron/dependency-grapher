@@ -612,11 +612,43 @@ def _calculate_blast_radius_from_analysis(analysis: Dict, file_path: str) -> Dic
     """
     חישוב Blast Radius מתוך נתוני הניתוח
     
-    זה פונקציית עזר זמנית - בגרסה מלאה נטען את הגרף בפועל
+    מחפש את הנתונים ב-top_risk_files או בגרף השמור
     """
-    # TODO: טעינת הגרף וחישוב אמיתי
-    # כרגע נחזיר mock data
+    # נסה למצוא את הקובץ ב-top_risk_files
+    top_risk_files = analysis.get('top_risk_files', [])
+    for risk_file in top_risk_files:
+        # השוואה של הנתיב (יכול להיות מלא או יחסי)
+        if risk_file.get('file_path', '').endswith(file_path) or file_path.endswith(risk_file.get('file_path', '')):
+            return {
+                "file_path": file_path,
+                "direct_dependents": [],  # אין לנו את הפירוט המלא
+                "indirect_dependents": [],
+                "total_affected": risk_file.get('blast_radius', 0),
+                "max_depth": 0,
+                "risk_score": risk_file.get('risk_score', 0),
+                "risk_level": risk_file.get('risk_level', 'low'),
+                "risk_factors": risk_file.get('risk_factors', [])
+            }
     
+    # אם לא נמצא ב-top_risk_files, נסה לחפש בגרף
+    graph_data = analysis.get('graph_data', {})
+    nodes = graph_data.get('nodes', [])
+    
+    for node in nodes:
+        node_path = node.get('relative_path', '') or node.get('file_path', '')
+        if node_path.endswith(file_path) or file_path.endswith(node_path):
+            # מצאנו את הצומת, אבל אין לנו מידע מלא על blast radius
+            return {
+                "file_path": file_path,
+                "direct_dependents": [],
+                "indirect_dependents": [],
+                "total_affected": 0,
+                "max_depth": 0,
+                "risk_score": node.get('complexity_score', 0) * 10,  # הערכה גסה
+                "risk_level": "low"
+            }
+    
+    # לא נמצא - החזר ברירת מחדל
     return {
         "file_path": file_path,
         "direct_dependents": [],

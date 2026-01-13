@@ -99,15 +99,70 @@ function App() {
     }
   };
 
-  const handleRiskFileClick = (file) => {
-    // Find node in graph
-    if (graphData && graphData.elements) {
+  const handleRiskFileClick = async (file) => {
+    // Create a file object for display even if not in graph
+    const fileData = {
+      id: file.file_path,
+      label: file.file_path.split('/').pop(),
+      full_path: file.file_path,
+      risk_score: file.risk_score,
+      risk_level: file.risk_level,
+      blast_radius_count: file.blast_radius
+    };
+    
+    // Find node in graph for additional data
+    if (graphData && graphData.elements && graphData.elements.nodes) {
       const node = graphData.elements.nodes.find(
         (n) => n.data.full_path === file.file_path
       );
       if (node) {
-        handleNodeClick(node.data);
+        // Merge graph data with risk file data
+        Object.assign(fileData, node.data);
       }
+    }
+    
+    // Set as selected file and switch to details tab
+    setSelectedFile(fileData);
+    setActiveTab('details');
+    
+    // Set blast radius from the risk file data we already have
+    // This is more reliable than the API which may return incomplete data
+    const blastFromRiskFile = {
+      file_path: file.file_path,
+      total_affected: file.blast_radius || 0,
+      risk_score: file.risk_score || 0,
+      risk_level: file.risk_level || 'low',
+      risk_factors: file.risk_factors || [],
+      direct_dependents: [],
+      indirect_dependents: []
+    };
+    
+    // Try to load detailed blast radius data from API
+    if (analysisId) {
+      try {
+        const blast = await getBlastRadius(analysisId, file.file_path);
+        // Only use API data if it has actual values, otherwise keep risk file data
+        if (blast && blast.total_affected > 0) {
+          setBlastRadius(blast);
+          // Highlight affected nodes in graph
+          const affected = [
+            fileData.id,
+            ...(blast.direct_dependents || []),
+            ...(blast.indirect_dependents || []),
+          ];
+          setHighlightedNodes(affected);
+        } else {
+          // API returned empty data, use the risk file data instead
+          setBlastRadius(blastFromRiskFile);
+          setHighlightedNodes([fileData.id]);
+        }
+      } catch (err) {
+        console.error('Failed to load blast radius from API, using risk file data:', err);
+        setBlastRadius(blastFromRiskFile);
+        setHighlightedNodes([fileData.id]);
+      }
+    } else {
+      setBlastRadius(blastFromRiskFile);
     }
   };
 
@@ -235,12 +290,23 @@ function App() {
             </div>
           )}
 
-          {graphData && (
+          {graphData && graphData.elements && graphData.elements.nodes && graphData.elements.nodes.length > 0 && (
             <GraphViewer
               graphData={graphData}
               onNodeClick={handleNodeClick}
               highlightedNodes={highlightedNodes}
             />
+          )}
+          
+          {/* Show message if graph data exists but is empty */}
+          {graphData && (!graphData.elements || !graphData.elements.nodes || graphData.elements.nodes.length === 0) && !loading && (
+            <div className="empty-state">
+              <Network size={64} className="empty-state-icon" />
+              <h2>No Dependencies Found</h2>
+              <p className="text-secondary">
+                The repository was analyzed but no Python dependencies were detected.
+              </p>
+            </div>
           )}
         </div>
       </main>

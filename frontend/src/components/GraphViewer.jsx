@@ -18,7 +18,24 @@ const GraphViewer = ({ graphData, onNodeClick, highlightedNodes = [] }) => {
   const [layout, setLayout] = useState('cose-bilkent');
 
   useEffect(() => {
-    if (!containerRef.current || !graphData) return;
+    // Validate we have container and valid graph data
+    if (!containerRef.current) {
+      console.log('[GraphViewer] No container ref');
+      return;
+    }
+    
+    if (!graphData || !graphData.elements) {
+      console.log('[GraphViewer] No graph data or elements');
+      return;
+    }
+    
+    const { nodes, edges } = graphData.elements;
+    if (!nodes || nodes.length === 0) {
+      console.log('[GraphViewer] No nodes in graph data');
+      return;
+    }
+    
+    console.log(`[GraphViewer] Initializing with ${nodes.length} nodes and ${edges?.length || 0} edges`);
 
     // Initialize Cytoscape
     const cy = cytoscape({
@@ -48,6 +65,7 @@ const GraphViewer = ({ graphData, onNodeClick, highlightedNodes = [] }) => {
     return () => {
       if (cyRef.current) {
         cyRef.current.destroy();
+        cyRef.current = null;
       }
     };
   }, [graphData, layout, onNodeClick]);

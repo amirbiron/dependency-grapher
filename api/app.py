@@ -16,7 +16,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
@@ -82,7 +82,7 @@ def handle_exception(e):
 @app.route('/', methods=['GET'])
 def index():
     """דף בית פשוט כדי שלא נקבל 404 בדומיין הראשי"""
-    return jsonify({
+    payload = {
         "name": "Dependency Grapher API",
         "status": "ok",
         "endpoints": {
@@ -97,7 +97,40 @@ def index():
             "files": "/api/analysis/{analysis_id}/files",
             "list_analyses": "/api/analyses"
         }
-    }), 200
+    }
+
+    # בדפדפן בד"כ נקבל Accept: text/html – נחזיר דף נחמד.
+    best = request.accept_mimetypes.best_match(["text/html", "application/json"])
+    if best == "text/html" and (
+        request.accept_mimetypes[best] > request.accept_mimetypes["application/json"]
+    ):
+        endpoints_html = "\n".join(
+            f'<li><a href="{url}">{key}</a> <code>{url}</code></li>'
+            for key, url in payload["endpoints"].items()
+        )
+        html = f"""<!doctype html>
+<html lang="he">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{payload["name"]}</title>
+  </head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 32px; line-height: 1.5;">
+    <h1 style="margin: 0 0 8px 0;">{payload["name"]}</h1>
+    <p style="margin: 0 0 20px 0;">Status: <strong>{payload["status"]}</strong></p>
+    <h2 style="margin: 0 0 8px 0;">Endpoints</h2>
+    <ul>
+      {endpoints_html}
+    </ul>
+    <p style="margin-top: 24px; color: #555;">
+      מחפש UI? כרגע זה שירות API בלבד—צריך להוסיף Frontend נפרד או דף סטטי.
+    </p>
+  </body>
+</html>
+"""
+        return Response(html, status=200, mimetype="text/html")
+
+    return jsonify(payload), 200
 
 @app.route('/health', methods=['GET'])
 def health_check():

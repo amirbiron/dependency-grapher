@@ -31,6 +31,10 @@ def validate_repo_url(url: str) -> bool:
         # חייב להיות scheme (http/https)
         if not parsed.scheme:
             return False
+
+        # תומכים רק ב-http/https
+        if parsed.scheme not in ('http', 'https'):
+            return False
         
         # חייב להיות netloc (github.com וכו')
         if not parsed.netloc:

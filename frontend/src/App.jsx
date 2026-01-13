@@ -235,12 +235,23 @@ function App() {
             </div>
           )}
 
-          {graphData && (
+          {graphData && graphData.elements && graphData.elements.nodes && graphData.elements.nodes.length > 0 && (
             <GraphViewer
               graphData={graphData}
               onNodeClick={handleNodeClick}
               highlightedNodes={highlightedNodes}
             />
+          )}
+          
+          {/* Show message if graph data exists but is empty */}
+          {graphData && (!graphData.elements || !graphData.elements.nodes || graphData.elements.nodes.length === 0) && !loading && (
+            <div className="empty-state">
+              <Network size={64} className="empty-state-icon" />
+              <h2>No Dependencies Found</h2>
+              <p className="text-secondary">
+                The repository was analyzed but no Python dependencies were detected.
+              </p>
+            </div>
           )}
         </div>
       </main>

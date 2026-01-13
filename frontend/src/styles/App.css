@@ -391,9 +391,19 @@ code {
 .graph-section {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  position: relative;
+  min-height: 0; /* Important for flex child to shrink properly */
+}
+
+/* Center content only when showing empty state or loading */
+.graph-section .empty-state,
+.graph-section .loading-container {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-primary);
 }
 
 /* Error Message */

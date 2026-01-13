@@ -99,14 +99,56 @@ function App() {
     }
   };
 
-  const handleRiskFileClick = (file) => {
-    // Find node in graph
-    if (graphData && graphData.elements) {
+  const handleRiskFileClick = async (file) => {
+    // Create a file object for display even if not in graph
+    const fileData = {
+      id: file.file_path,
+      label: file.file_path.split('/').pop(),
+      full_path: file.file_path,
+      risk_score: file.risk_score,
+      risk_level: file.risk_level,
+      blast_radius_count: file.blast_radius
+    };
+    
+    // Find node in graph for additional data
+    if (graphData && graphData.elements && graphData.elements.nodes) {
       const node = graphData.elements.nodes.find(
         (n) => n.data.full_path === file.file_path
       );
       if (node) {
-        handleNodeClick(node.data);
+        // Merge graph data with risk file data
+        Object.assign(fileData, node.data);
+      }
+    }
+    
+    // Set as selected file and switch to details tab
+    setSelectedFile(fileData);
+    setActiveTab('details');
+    
+    // Try to load blast radius data
+    if (analysisId) {
+      try {
+        const blast = await getBlastRadius(analysisId, file.file_path);
+        setBlastRadius(blast);
+        
+        // Highlight affected nodes in graph
+        const affected = [
+          fileData.id,
+          ...(blast.direct_dependents || []),
+          ...(blast.indirect_dependents || []),
+        ];
+        setHighlightedNodes(affected);
+      } catch (err) {
+        console.error('Failed to load blast radius:', err);
+        // Set basic blast radius from risk file data
+        setBlastRadius({
+          file_path: file.file_path,
+          total_affected: file.blast_radius || 0,
+          risk_score: file.risk_score,
+          risk_level: file.risk_level,
+          direct_dependents: [],
+          indirect_dependents: []
+        });
       }
     }
   };

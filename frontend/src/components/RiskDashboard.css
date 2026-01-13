@@ -1,0 +1,112 @@
+.risk-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.risk-dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+}
+
+.risk-dashboard-header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.risk-dashboard-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.risk-files-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.risk-file-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.risk-file-item:hover {
+  background-color: #343b4d;
+  transform: translateY(-1px);
+}
+
+.risk-file-rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-secondary);
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.risk-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-file-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+}
+
+.risk-file-details {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.risk-file-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.risk-file-score {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.risk-score-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.risk-score-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}

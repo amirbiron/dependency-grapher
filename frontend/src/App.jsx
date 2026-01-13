@@ -1,0 +1,245 @@
+/**
+ * Main App Component
+ * הרכיב הראשי שמחבר את כל הרכיבים
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Network } from 'lucide-react';
+import AnalysisForm from './components/AnalysisForm';
+import ProgressBar from './components/ProgressBar';
+import ProjectStats from './components/ProjectStats';
+import RiskDashboard from './components/RiskDashboard';
+import GraphViewer from './components/GraphViewer';
+import FileDetails from './components/FileDetails';
+import { useAnalysis } from './hooks/useAnalysis';
+import { getGraph, getBlastRadius, getRiskFiles } from './services/api';
+import './styles/App.css';
+
+function App() {
+  // Analysis state
+  const { loading, error, analysisId, status, progress, analyze, reset } = useAnalysis();
+
+  // Graph state
+  const [graphData, setGraphData] = useState(null);
+  const [riskFiles, setRiskFiles] = useState([]);
+  
+  // UI state
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [blastRadius, setBlastRadius] = useState(null);
+  const [highlightedNodes, setHighlightedNodes] = useState([]);
+  const [activeTab, setActiveTab] = useState('risk'); // 'risk' or 'details'
+
+  // Load graph when analysis completes
+  useEffect(() => {
+    if (status?.status === 'complete' && analysisId) {
+      loadGraphData();
+      loadRiskFiles();
+    }
+  }, [status, analysisId]);
+
+  const loadGraphData = async () => {
+    try {
+      const data = await getGraph(analysisId);
+      setGraphData(data);
+    } catch (err) {
+      console.error('Failed to load graph:', err);
+    }
+  };
+
+  const loadRiskFiles = async () => {
+    try {
+      const data = await getRiskFiles(analysisId, 10);
+      setRiskFiles(data.risk_files || []);
+    } catch (err) {
+      console.error('Failed to load risk files:', err);
+    }
+  };
+
+  const handleStartAnalysis = async (repoUrl, branch) => {
+    try {
+      // Reset state
+      setGraphData(null);
+      setRiskFiles([]);
+      setSelectedFile(null);
+      setBlastRadius(null);
+      setHighlightedNodes([]);
+
+      // Start analysis
+      await analyze(repoUrl, branch);
+    } catch (err) {
+      console.error('Analysis failed:', err);
+    }
+  };
+
+  const handleNodeClick = async (node) => {
+    setSelectedFile(node);
+    setActiveTab('details');
+
+    // Load blast radius
+    try {
+      const blast = await getBlastRadius(analysisId, node.full_path);
+      setBlastRadius(blast);
+
+      // Highlight affected nodes
+      const affected = [
+        node.id,
+        ...(blast.direct_dependents || []),
+        ...(blast.indirect_dependents || []),
+      ];
+      setHighlightedNodes(affected);
+    } catch (err) {
+      console.error('Failed to load blast radius:', err);
+      setBlastRadius(null);
+    }
+  };
+
+  const handleRiskFileClick = (file) => {
+    // Find node in graph
+    if (graphData && graphData.elements) {
+      const node = graphData.elements.nodes.find(
+        (n) => n.data.full_path === file.file_path
+      );
+      if (node) {
+        handleNodeClick(node.data);
+      }
+    }
+  };
+
+  const handleReset = () => {
+    reset();
+    setGraphData(null);
+    setRiskFiles([]);
+    setSelectedFile(null);
+    setBlastRadius(null);
+    setHighlightedNodes([]);
+  };
+
+  return (
+    <div className="app">
+      {/* Header */}
+      <header className="header">
+        <div className="header-title">
+          <Network className="header-title-icon" />
+          Dependency Grapher
+        </div>
+        
+        {status?.status === 'complete' && (
+          <button className="btn btn-secondary" onClick={handleReset}>
+            New Analysis
+          </button>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className="main-content">
+        {/* Sidebar */}
+        <aside className="sidebar">
+          {/* Analysis Form */}
+          {!loading && !status && (
+            <div className="sidebar-section">
+              <div className="sidebar-section-title">Start Analysis</div>
+              <AnalysisForm onSubmit={handleStartAnalysis} loading={loading} />
+            </div>
+          )}
+
+          {/* Progress */}
+          {loading && (
+            <div className="sidebar-section">
+              <div className="sidebar-section-title">Analyzing...</div>
+              <ProgressBar
+                progress={progress}
+                message={status?.progress_message}
+                status={status?.status}
+              />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="sidebar-section">
+              <div className="error-message">
+                <strong>Error:</strong> {error}
+              </div>
+            </div>
+          )}
+
+          {/* Stats */}
+          {status?.status === 'complete' && status.summary && (
+            <div className="sidebar-section">
+              <div className="sidebar-section-title">Project Stats</div>
+              <ProjectStats summary={status.summary} />
+            </div>
+          )}
+
+          {/* Tabs */}
+          {status?.status === 'complete' && (
+            <div className="sidebar-tabs">
+              <button
+                className={`sidebar-tab ${activeTab === 'risk' ? 'active' : ''}`}
+                onClick={() => setActiveTab('risk')}
+              >
+                Risk Files
+              </button>
+              <button
+                className={`sidebar-tab ${activeTab === 'details' ? 'active' : ''}`}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </button>
+            </div>
+          )}
+
+          {/* Scrollable Content */}
+          <div className="sidebar-scrollable">
+            {status?.status === 'complete' && (
+              <>
+                {activeTab === 'risk' && (
+                  <RiskDashboard
+                    riskFiles={riskFiles}
+                    onFileClick={handleRiskFileClick}
+                  />
+                )}
+                {activeTab === 'details' && (
+                  <FileDetails
+                    file={selectedFile}
+                    blastRadius={blastRadius}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </aside>
+
+        {/* Graph Viewer */}
+        <div className="graph-section">
+          {!graphData && !loading && (
+            <div className="empty-state">
+              <Network size={64} className="empty-state-icon" />
+              <h2>Welcome to Dependency Grapher</h2>
+              <p className="text-secondary">
+                Enter a repository URL to start analyzing dependencies
+              </p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="loading-container">
+              <div className="spinner" />
+              <p className="text-secondary">Analyzing repository...</p>
+            </div>
+          )}
+
+          {graphData && (
+            <GraphViewer
+              graphData={graphData}
+              onNodeClick={handleNodeClick}
+              highlightedNodes={highlightedNodes}
+            />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default App;

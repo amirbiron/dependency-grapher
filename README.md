@@ -307,3 +307,86 @@ MIT License
 ---
 
 **נוצר על ידי אמיר חיים** 🚀
+
+---
+
+## 🎨 Frontend
+
+React application עם Cytoscape.js לויזואליזציה.
+
+### התקנה מהירה
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+ראה [FRONTEND_QUICKSTART.md](FRONTEND_QUICKSTART.md) לפרטים מלאים.
+
+### Screenshots
+
+**Dashboard:**
+```
+┌─────────────────────────────────────┐
+│  📊 Project Stats                   │
+│  Files: 150  Imports: 542           │
+│  Classes: 89  Errors: 2             │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  🔴 Top Risk Files                  │
+│  1. database/manager.py    87.3/100 │
+│  2. api/routes.py          72.1/100 │
+│  3. bot/handlers.py        65.4/100 │
+└─────────────────────────────────────┘
+```
+
+**Graph:**
+```
+Interactive network graph עם:
+- Zoom/Pan controls
+- 4 layout options
+- Node highlighting
+- Export PNG
+```
+
+---
+
+## 🚀 Full Stack Setup
+
+### Terminal 1: MongoDB
+```bash
+mongod
+# או MongoDB Atlas
+```
+
+### Terminal 2: API
+```bash
+python api/run.py
+```
+
+### Terminal 3: Frontend
+```bash
+cd frontend
+npm start
+```
+
+### Browser
+```
+http://localhost:3000
+```
+
+---
+
+## 📦 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Cytoscape.js |
+| API | Flask, Python |
+| Database | MongoDB |
+| Analysis | AST, NetworkX |
+| Visualization | Cytoscape.js |
+| Deployment | Render, Vercel |
+

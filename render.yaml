@@ -5,9 +5,14 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -r requirements-api.txt
+    # Use a minimal runtime requirements set to avoid long/fragile builds
+    # (dev/test/visualization deps stay in requirements.txt for local use)
+    buildCommand: pip install -r requirements-runtime.txt
     startCommand: gunicorn api.app:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
     envVars:
+      # Pin Python version so wheels resolve consistently (prevents source builds)
+      - key: PYTHON_VERSION
+        value: 3.12.3
       - key: FLASK_ENV
         value: production
       - key: FLASK_DEBUG

@@ -79,6 +79,20 @@ def handle_exception(e):
 # Health Check
 # ============================================
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root route (useful for platform health checks)."""
+    return jsonify({
+        "service": "dependency-grapher-api",
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat(),
+        "endpoints": {
+            "health": "/health",
+            "api_health": "/api/health",
+            "start_analysis": "/api/analyze"
+        }
+    }), 200
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """בדיקת תקינות השרת"""

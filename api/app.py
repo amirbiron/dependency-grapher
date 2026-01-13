@@ -79,26 +79,6 @@ def handle_exception(e):
 # Health Check
 # ============================================
 
-@app.route('/', methods=['GET'])
-def index():
-    """דף בית פשוט כדי שלא נקבל 404 בדומיין הראשי"""
-    return jsonify({
-        "name": "Dependency Grapher API",
-        "status": "ok",
-        "endpoints": {
-            "health": "/health",
-            "api_health": "/api/health",
-            "analyze": "/api/analyze",
-            "analysis": "/api/analysis/{analysis_id}",
-            "graph": "/api/analysis/{analysis_id}/graph",
-            "blast_radius": "/api/analysis/{analysis_id}/blast-radius/{file_path}",
-            "risk_files": "/api/analysis/{analysis_id}/risk-files",
-            "metrics": "/api/analysis/{analysis_id}/metrics",
-            "files": "/api/analysis/{analysis_id}/files",
-            "list_analyses": "/api/analyses"
-        }
-    }), 200
-
 @app.route('/health', methods=['GET'])
 def health_check():
     """בדיקת תקינות השרת"""

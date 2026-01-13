@@ -18,3 +18,22 @@ services:
         value: dependency_grapher
       - key: SECRET_KEY
         generateValue: true
+
+  # Frontend (Static Site)
+  - type: web
+    name: dependency-grapher-frontend
+    env: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      # Build-time env for React (Create React App)
+      - key: REACT_APP_API_URL
+        value: https://dependency-grapher-api.onrender.com
+    routes:
+      # SPA fallback (React Router / direct deep links)
+      - type: rewrite
+        source: /*
+        destination: /index.html

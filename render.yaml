@@ -3,7 +3,6 @@ services:
   - type: web
     name: dependency-grapher-api
     env: python
-    region: oregon
     plan: free
     buildCommand: pip install -r requirements.txt && pip install -r requirements-api.txt
     startCommand: gunicorn api.app:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
@@ -23,7 +22,6 @@ services:
   - type: web
     name: dependency-grapher-frontend
     env: static
-    region: oregon
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build

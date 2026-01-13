@@ -2,7 +2,7 @@
  * Custom hook for managing analysis lifecycle
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { startAnalysis, getAnalysis, pollAnalysis } from '../services/api';
 
 export const useAnalysis = () => {

@@ -125,31 +125,44 @@ function App() {
     setSelectedFile(fileData);
     setActiveTab('details');
     
-    // Try to load blast radius data
+    // Set blast radius from the risk file data we already have
+    // This is more reliable than the API which may return incomplete data
+    const blastFromRiskFile = {
+      file_path: file.file_path,
+      total_affected: file.blast_radius || 0,
+      risk_score: file.risk_score || 0,
+      risk_level: file.risk_level || 'low',
+      risk_factors: file.risk_factors || [],
+      direct_dependents: [],
+      indirect_dependents: []
+    };
+    
+    // Try to load detailed blast radius data from API
     if (analysisId) {
       try {
         const blast = await getBlastRadius(analysisId, file.file_path);
-        setBlastRadius(blast);
-        
-        // Highlight affected nodes in graph
-        const affected = [
-          fileData.id,
-          ...(blast.direct_dependents || []),
-          ...(blast.indirect_dependents || []),
-        ];
-        setHighlightedNodes(affected);
+        // Only use API data if it has actual values, otherwise keep risk file data
+        if (blast && blast.total_affected > 0) {
+          setBlastRadius(blast);
+          // Highlight affected nodes in graph
+          const affected = [
+            fileData.id,
+            ...(blast.direct_dependents || []),
+            ...(blast.indirect_dependents || []),
+          ];
+          setHighlightedNodes(affected);
+        } else {
+          // API returned empty data, use the risk file data instead
+          setBlastRadius(blastFromRiskFile);
+          setHighlightedNodes([fileData.id]);
+        }
       } catch (err) {
-        console.error('Failed to load blast radius:', err);
-        // Set basic blast radius from risk file data
-        setBlastRadius({
-          file_path: file.file_path,
-          total_affected: file.blast_radius || 0,
-          risk_score: file.risk_score,
-          risk_level: file.risk_level,
-          direct_dependents: [],
-          indirect_dependents: []
-        });
+        console.error('Failed to load blast radius from API, using risk file data:', err);
+        setBlastRadius(blastFromRiskFile);
+        setHighlightedNodes([fileData.id]);
       }
+    } else {
+      setBlastRadius(blastFromRiskFile);
     }
   };
 

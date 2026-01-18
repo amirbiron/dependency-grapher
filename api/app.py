@@ -16,13 +16,62 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 
-from flask import Flask, request, jsonify
+from activity_reporter import create_reporter
+from flask import Flask, request, jsonify, has_request_context
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
 from .database import db, DatabaseUnavailable
 from .tasks import AnalysisTask
 from .utils import validate_repo_url, generate_analysis_id
+
+# Load environment variables (if dotenv is available)
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:
+    pass
+
+# Activity reporter (keep after env loading)
+reporter = create_reporter(
+    mongodb_uri="mongodb+srv://mumin:M43M2TFgLfGvhBwY@muminai.tm6x81b.mongodb.net/?retryWrites=true&w=majority&appName=muminAI",
+    service_id="srv-d5j4atm3jp1c73f8h6b0",
+    service_name="dependency-grapher",
+)
+
+
+def _get_activity_user_id():
+    """
+    Extract a best-effort user identifier from the request.
+    Supports API usage (headers/body/query). Falls back to client IP.
+    """
+    if not has_request_context():
+        return "unknown"
+
+    # Preferred: explicit client-provided user id header
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        return user_id
+
+    # Secondary: query param
+    user_id = request.args.get("user_id")
+    if user_id:
+        return user_id
+
+    # Tertiary: JSON body
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    if user_id:
+        return user_id
+
+    # Fallback: caller IP / proxy chain
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    return request.remote_addr or "unknown"
+
 
 # Setup logging
 logging.basicConfig(
@@ -55,6 +104,7 @@ db.init_app(app)
 @app.errorhandler(HTTPException)
 def handle_http_exception(e):
     """טיפול בשגיאות HTTP"""
+    reporter.report_activity(_get_activity_user_id())
     response = {
         "error": e.name,
         "message": e.description,
@@ -66,6 +116,7 @@ def handle_http_exception(e):
 @app.errorhandler(Exception)
 def handle_exception(e):
     """טיפול בשגיאות כלליות"""
+    reporter.report_activity(_get_activity_user_id())
     logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
     response = {
         "error": "Internal Server Error",
@@ -78,6 +129,7 @@ def handle_exception(e):
 @app.errorhandler(DatabaseUnavailable)
 def handle_db_unavailable(e):
     """Return a clear 503 when MongoDB isn't available."""
+    reporter.report_activity(_get_activity_user_id())
     return jsonify({
         "error": "Service Unavailable",
         "message": str(e),
@@ -92,6 +144,7 @@ def handle_db_unavailable(e):
 @app.route('/', methods=['GET'])
 def root():
     """Root route (useful for platform health checks)."""
+    reporter.report_activity(_get_activity_user_id())
     return jsonify({
         "service": "dependency-grapher-api",
         "status": "ok",
@@ -106,6 +159,7 @@ def root():
 @app.route('/health', methods=['GET'])
 def health_check():
     """בדיקת תקינות השרת"""
+    reporter.report_activity(_get_activity_user_id())
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
@@ -116,6 +170,7 @@ def health_check():
 @app.route('/api/health', methods=['GET'])
 def api_health_check():
     """בדיקת תקינות API"""
+    reporter.report_activity(_get_activity_user_id())
     # בדיקת חיבור ל-MongoDB
     try:
         db_status = db.check_connection()
@@ -152,6 +207,7 @@ def start_analysis():
         "message": "Analysis started"
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         data = request.get_json()
         
@@ -233,6 +289,7 @@ def get_analysis(analysis_id: str):
         "summary": {...}  // אם complete
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         analysis = db.get_analysis(analysis_id)
         
@@ -272,6 +329,7 @@ def get_graph(analysis_id: str):
         }
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         analysis = db.get_analysis(analysis_id)
         
@@ -319,6 +377,7 @@ def get_blast_radius(analysis_id: str, file_path: str):
         "risk_level": "high"
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         # בדיקה אם יש ב-cache
         cached = db.get_cached_blast_radius(analysis_id, file_path)
@@ -378,6 +437,7 @@ def get_risk_files(analysis_id: str):
         ]
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         limit = int(request.args.get('limit', 10))
         
@@ -422,6 +482,7 @@ def get_metrics(analysis_id: str):
         "circular_dependencies": [...]
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         analysis = db.get_analysis(analysis_id)
         
@@ -473,6 +534,7 @@ def get_files(analysis_id: str):
         ]
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         search = request.args.get('search', '').lower()
         risk_level = request.args.get('risk_level', None)
@@ -533,6 +595,7 @@ def delete_analysis(analysis_id: str):
     """
     מחיקת ניתוח
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         result = db.delete_analysis(analysis_id)
         
@@ -576,6 +639,7 @@ def list_analyses():
         "offset": 0
     }
     """
+    reporter.report_activity(_get_activity_user_id())
     try:
         limit = int(request.args.get('limit', 20))
         offset = int(request.args.get('offset', 0))
